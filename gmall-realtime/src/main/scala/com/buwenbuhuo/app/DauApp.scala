@@ -5,18 +5,20 @@ import com.buwenbuhuo.bean.StartUpLog
 import com.buwenbuhuo.constants.GmallConstants
 import com.buwenbuhuo.handler.DauHandler
 import com.buwenbuhuo.utils.MyKafkaUtil
+import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import java.text.SimpleDateFormat
 import java.util.Date
+import org.apache.phoenix.spark._
 
 /**
  * Author 不温卜火
  * Create 2022-03-15 20:56
  * MyBlog https://buwenbuhuo.blog.csdn.net
- * Description: 批次间去重（方法3）
+ * Description: 将数据写入到Hbase中
  */
 object DauApp {
   def main(args: Array[String]): Unit = {
@@ -60,12 +62,22 @@ object DauApp {
     fileterByRedisDStream.count().print()
 
     // 4. 做批次内去重
-
+    val fiterByGroupDStream: DStream[StartUpLog] = DauHandler.filterByGroup(fileterByRedisDStream)
+    // 打印当前流的个数
+    fiterByGroupDStream.count().print()
+    fiterByGroupDStream.print()
 
     // 5. 将去重的结果写入redis中
-    DauHandler.saveToRedis(fileterByRedisDStream)
+    DauHandler.saveToRedis(fiterByGroupDStream)
 
     // 6. 将去重后的明细数据写入hbase
+    fiterByGroupDStream.foreachRDD(rdd => {
+      rdd.saveToPhoenix(
+        "GMALL2022_DAU",
+        Seq("MID", "UID", "APPID", "AREA", "OS", "CH", "TYPE", "VS", "LOGDATE", "LOGHOUR", "TS"),
+        HBaseConfiguration.create,
+        Some("hadoop01,hadoop02,hadoop03:2181"))
+    })
 
     // TODO 3.结束
     // 1. 开启任务
