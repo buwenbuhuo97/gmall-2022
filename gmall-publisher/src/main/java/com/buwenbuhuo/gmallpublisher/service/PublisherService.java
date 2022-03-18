@@ -15,4 +15,10 @@ public interface PublisherService {
     // 获取日活分时数据
     public Map getDauHourTotal(String date);
 
+    //交易额总数
+    public Double getGmvTotal(String date);
+
+    //交易额分时数据
+    public Map<String, Double> getGmvHourTotal(String date);
+
 }

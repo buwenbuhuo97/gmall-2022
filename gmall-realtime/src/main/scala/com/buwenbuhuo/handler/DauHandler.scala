@@ -23,7 +23,7 @@ object DauHandler {
    * @param fileterByRedisDStream
    */
   def filterByGroup(fileterByRedisDStream: DStream[StartUpLog]) = {
-    // 1. 将数据转为KV的格式
+    // 1. 将数据格式转为K-V的格式
     val midWithLogDateToLogDStream: DStream[((String, String), StartUpLog)] = fileterByRedisDStream.map(startUpLog => {
       ((startUpLog.mid, startUpLog.logDate), startUpLog)
     })
