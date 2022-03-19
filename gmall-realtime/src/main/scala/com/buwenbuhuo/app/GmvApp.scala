@@ -27,7 +27,8 @@ object GmvApp {
 
     // TODO 2.核心代码
     // 1.获取Kafka中的数据
-    val kafkaDStream: InputDStream[ConsumerRecord[String, String]] = MyKafkaUtil.getKafkaStream(GmallConstants.KAFKA_TOPIC_ORDER, ssc)
+    val kafkaDStream: InputDStream[ConsumerRecord[String, String]] = MyKafkaUtil.getKafkaStream(
+      GmallConstants.KAFKA_TOPIC_ORDER, ssc)
     // 2.把JSON格式的数据转为样例类，并补全字段
     val orderInfoDStream: DStream[OrderInfo] = kafkaDStream.mapPartitions(partition => {
       partition.map(record => {
@@ -37,14 +38,18 @@ object GmvApp {
         orderInfo.create_date = orderInfo.create_time.split(" ")(0)
         orderInfo.create_hour = orderInfo.create_time.split(" ")(1).split(":")(0)
         // 对手机号做脱敏操作
-        orderInfo.consignee_tel = orderInfo.consignee_tel.substring(0, 3) + "*******"
+        orderInfo.consignee_tel = orderInfo.consignee_tel.substring(0, 3) + "*****" +
+          orderInfo.consignee_tel.substring(8, 11)
 
         // 返回样例类
         orderInfo
       })
     })
 
-    // 3.将数据写入Hbase
+    // 打印流
+    orderInfoDStream.print()
+
+    // 3.将数据写入Phoenix
     orderInfoDStream.foreachRDD(rdd => {
       rdd.saveToPhoenix("GMALL2022_ORDER_INFO",
         Seq("ID", "PROVINCE_ID", "CONSIGNEE", "ORDER_COMMENT", "CONSIGNEE_TEL", "ORDER_STATUS", "PAYMENT_WAY", "USER_ID", "IMG_URL", "TOTAL_AMOUNT", "EXPIRE_TIME", "DELIVERY_ADDRESS", "CREATE_TIME", "OPERATE_TIME", "TRACKING_NO", "PARENT_ORDER_ID", "OUT_TRADE_NO", "TRADE_BODY", "CREATE_DATE", "CREATE_HOUR"),

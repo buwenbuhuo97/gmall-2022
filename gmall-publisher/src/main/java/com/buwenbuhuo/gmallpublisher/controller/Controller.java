@@ -78,11 +78,15 @@ public class Controller {
         /**
          * 获取Service层的数据
          */
-        // 获取昨天的日期
+        //  获取昨天的日期
         String yesterday = LocalDate.parse(date).plusDays(-1).toString();
+
+
+        // TODO 根据id进行判断，往最终map集合中放的是哪个需求的数据
         Map todayHourMap = null;
         Map yesterdayHourMap = null;
         if ("order_amount".equals(id)){
+            // 分别获取昨天和今天的数据
             todayHourMap = publisherService.getGmvHourTotal(date);
             yesterdayHourMap = publisherService.getGmvHourTotal(yesterday);
         }else if ("dau".equals(id)){
