@@ -33,7 +33,7 @@ object MyKafkaUtil {
     "key.deserializer" -> classOf[StringDeserializer],
     "value.deserializer" -> classOf[StringDeserializer],
     // 消费者组，此处正常不应该写死
-    "group.id" -> "bigdata2022",
+    "group.id" -> "bigdata20220320",
     /**
       如果没有初始化偏移量或者当前的偏移量不存在任何服务器上，可以使用这个配置属性
       可以使用这个配置，latest自动重置偏移量为最新的偏移量

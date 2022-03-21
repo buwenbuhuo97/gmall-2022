@@ -11,6 +11,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Author 不温卜火
@@ -32,7 +33,7 @@ public class CanalClient {
         CanalConnector connector = CanalConnectors.newSingleConnector(new InetSocketAddress("hadoop01", 11111),
                 "example", "", "");
 
-        while (true){
+        while (true) {
             // 2. 获取连接
             connector.connect();
             // 3. 指定订阅的数据库  Tips:括号里面需要的是正则表达式
@@ -41,7 +42,7 @@ public class CanalClient {
              *  点subscribe进去发现其为抽象方法，查找其实现类SimpleCanalConnector
              *  查找subscribe，翻到第八个确定其是要传入所要监听的数据库
              */
-            connector.subscribe("gmall.*");
+            connector.subscribe("gmall220317.*");
             // 4. 获取数据
             /**
              * 获取数据的方法有两种：get和getWithoutAck
@@ -63,7 +64,7 @@ public class CanalClient {
             List<CanalEntry.Entry> entries = message.getEntries();
 
             // 如果有数据，直接拉取数据
-            if (entries.size()>0){
+            if (entries.size() > 0) {
                 // 证明有数据存在
                 for (CanalEntry.Entry entry : entries) {
                     // TODO 6. 获取表名
@@ -72,7 +73,7 @@ public class CanalClient {
                     // 7.获取entry类型
                     CanalEntry.EntryType entryType = entry.getEntryType();
                     // 8.判断entry类型获取数据
-                    if (CanalEntry.EntryType.ROWDATA.equals(entryType)){
+                    if (CanalEntry.EntryType.ROWDATA.equals(entryType)) {
                         // 9.获取序列化的数据
                         ByteString storeValue = entry.getStoreValue();
                         // 10.对数据做反序列化
@@ -85,10 +86,10 @@ public class CanalClient {
                         List<CanalEntry.RowData> rowDatasList = rowChange.getRowDatasList();
 
                         // 根据不同的需求获取不同表中不同事件类型(新增|新增及变化|变化|删除)的数据
-                        handle(tableName,eventType,rowDatasList);
+                        handle(tableName, eventType, rowDatasList);
                     }
                 }
-            }else{
+            } else {
                 // 如果没数据的话，则休息一会在拉取数据
                 System.out.println("没有数据休息一会^-^");
                 try {
@@ -98,29 +99,43 @@ public class CanalClient {
                 }
             }
         }
-
     }
 
     private static void handle(String tableName, CanalEntry.EventType eventType, List<CanalEntry.RowData>
             rowDatasList) {
         // 1. 根据表名判断获取的数据来源，根据事件类型判断获取新增的数据
-        if ("order_info".equals(tableName)&&CanalEntry.EventType.INSERT.equals(eventType)){
-            // 获取每一行数据
-            for (CanalEntry.RowData rowData : rowDatasList){
-                // 获取每一行中每一列的数据
-                JSONObject jsonObject = new JSONObject();
-                for (CanalEntry.Column column : rowData.getAfterColumnsList()){
-                    jsonObject.put(column.getName(), column.getValue());
-                }
-                System.out.println(jsonObject.toJSONString());
-                // 将数据发送至Kafka
-                MyKafkaSender.send(GmallConstants.KAFKA_TOPIC_ORDER,jsonObject.toJSONString());
+        if ("order_info".equals(tableName) && CanalEntry.EventType.INSERT.equals(eventType)) {
+            saveToKafka(rowDatasList, GmallConstants.KAFKA_TOPIC_ORDER);
+        } else if ("order_detail".equals(tableName) && CanalEntry.EventType.INSERT.equals(eventType)) {
+            saveToKafka(rowDatasList, GmallConstants.KAFKA_TOPIC_ORDER_DETAIL);
+        } else if ("user_info".equals(tableName) && CanalEntry.EventType.INSERT.equals
+                (eventType) || CanalEntry.EventType.UPDATE.equals(eventType)) {
+            saveToKafka(rowDatasList, GmallConstants.KAFKA_TOPIC_USER);
+        }
+    }
+
+    private static void saveToKafka(List<CanalEntry.RowData> rowDatasList, String kafkaTopicOrder) {
+        // 获取每一行数据
+        for (CanalEntry.RowData rowData : rowDatasList) {
+            // 获取每一行中每一列的数据
+            JSONObject jsonObject = new JSONObject();
+            for (CanalEntry.Column column : rowData.getAfterColumnsList()) {
+                jsonObject.put(column.getName(), column.getValue());
             }
+            System.out.println(jsonObject.toJSONString());
+
+            // 模拟网络延迟
+            /*try {
+                Thread.sleep(new Random().nextInt(5)*1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }*/
+
+            // 将数据发送至Kafka
+            MyKafkaSender.send(kafkaTopicOrder, jsonObject.toJSONString());
         }
     }
 }
-
-
 
 
 
