@@ -6,6 +6,7 @@ import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.config.HttpClientConfig;
 import io.searchbox.core.Index;
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * Author 不温卜火

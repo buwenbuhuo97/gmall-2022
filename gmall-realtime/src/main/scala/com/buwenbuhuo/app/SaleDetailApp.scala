@@ -27,7 +27,7 @@ object SaleDetailApp {
     val ssc: StreamingContext = new StreamingContext(sparkConf, Seconds(3))
 
     // TODO 2. 核心程序
-    // 1.分别获取orderInfo的数据以及orderDetail的数据
+    // 1.消费kafka中的数据：分别获取orderInfo(订单表)的数据以及orderDetail(订单明细表)的数据
     val orderInfoKafkaDStream: InputDStream[ConsumerRecord[String, String]] = MyKafkaUtil
       .getKafkaStream(GmallConstants.KAFKA_TOPIC_ORDER, ssc)
 
@@ -96,13 +96,15 @@ object SaleDetailApp {
           // 3. 将自己(orderInfo)数据写入缓存
           val orderInfoJson: String = Serialization.write(orderInfo)
           jedis.set(orderInfoRedisKey, orderInfoJson)
-          // 设置过期时间（时间推荐大一点，手动认为模拟时间和时间有差距）
-          jedis.expire(orderInfoRedisKey, 100)
+          // 设置过期时间,通常过期时间是网络延迟事件（时间推荐大一点，手动认为模拟时间和时间有差距）
+          jedis.expire(orderInfoRedisKey, 20)
 
-          // 4.去对方缓存（orderDetail）中擦汗寻有没有能关联上的数据
-          // 先判断对方缓存中是否有对应的redisKey，有的话再将数据查询出来，并关联
+          /**
+           * 4.去对方缓存（orderDetail）中查寻有没有能关联上的数据
+           * 先判断对方缓存中是否有对应的redisKey，有的话再将数据查询出来，并关联
+           */
           if (jedis.exists(orderDetailRedisKey)) {
-            // 有能关联上的数据
+            // 证明有能关联上orderDetail的数据
             val orderDetailSet: util.Set[String] = jedis.smembers(orderDetailRedisKey)
 
             /**

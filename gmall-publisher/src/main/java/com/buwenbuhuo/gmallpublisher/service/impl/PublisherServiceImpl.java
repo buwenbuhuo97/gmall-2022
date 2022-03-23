@@ -110,40 +110,46 @@ public class PublisherServiceImpl implements PublisherService {
 
         SearchResult searchResult = jestClient.execute(search);
 
-        //1.获取总数
+        // TODO 1.获取总数
         Long total = searchResult.getTotal();
 
-        //2.获取数据明细
+        // TODO 2.获取数据明细
+        // 创建一个存放明细数据的List集合
         ArrayList<Map> detail = new ArrayList<>();
         List<SearchResult.Hit<Map, Void>> hits = searchResult.getHits(Map.class);
         for (SearchResult.Hit<Map, Void> hit : hits) {
             detail.add(hit.source);
         }
 
-        //创建list集合用来存放年龄的Option对象
+        // TODO 3.获取聚合组数据
+        // 创建list集合用来存放年龄的Option对象
         ArrayList<Option> ageOptions = new ArrayList<>();
-        //创建list集合用来存放年龄的Option对象
+        // 创建list集合用来存放年龄的Option对象
         ArrayList<Option> genderOptions = new ArrayList<>();
-        //3.获取年龄占比数据
+        // 1.获取年龄占比数据
         MetricAggregation aggregations = searchResult.getAggregations();
         TermsAggregation groupbyAge = aggregations.getTermsAggregation("groupby_user_age");
         List<TermsAggregation.Entry> buckets = groupbyAge.getBuckets();
+        // 存放20岁以下的人数
         Long low20Count = 0L;
+        // 存放30岁及30岁以上的人数
         Long up30Count = 0L;
         for (TermsAggregation.Entry bucket : buckets) {
+            // 获取20岁以下的个数
             if (Integer.parseInt(bucket.getKey()) < 20) {
                 low20Count += bucket.getCount();
+             // 获取30岁及30岁以上的个数
             }else if(Integer.parseInt(bucket.getKey())>30){
                 up30Count += bucket.getCount();
             }
         }
-        //获取小于20岁的年龄占比
+        // 获取小于20岁的年龄占比
         double low20Ratio = Math.round(low20Count * 1000D / total) / 10D;
 
-        //获取大于30岁的年龄占比
+        // 获取大于30岁的年龄占比
         double up30Ratio = Math.round(up30Count * 1000D / total) / 10D;
 
-        //获取大于20小于30的年龄占比
+        // 获取大于20小于30的年龄占比
         double up20AndLow30Ratio = Math.round((100D - low20Ratio - up30Ratio) * 10D) / 10D;
         Option low20Opt = new Option("20岁以下", low20Ratio);
         Option up30Opt = new Option("30岁及30岁以上", up30Ratio);
@@ -151,13 +157,14 @@ public class PublisherServiceImpl implements PublisherService {
         ageOptions.add(low20Opt);
         ageOptions.add(up30Opt);
         ageOptions.add(up20AndLow30Opt);
-        //创建年龄占比的Stat对象
+        // 创建年龄占比的Stat对象
         Stat ageStat = new Stat(ageOptions, "用户年龄占比");
 
-        //4.获取用户性别占比数据
+        // 2.获取用户性别占比数据
         MetricAggregation aggregations1 = searchResult.getAggregations();
         TermsAggregation groupbyGender = aggregations1.getTermsAggregation("groupby_user_gender");
         List<TermsAggregation.Entry> buckets1 = groupbyGender.getBuckets();
+        // 定义一个变量用来存放男生个数
         Long male = 0L;
         for (TermsAggregation.Entry entry : buckets1) {
             if ("M".equals(entry.getKey())){
@@ -165,10 +172,10 @@ public class PublisherServiceImpl implements PublisherService {
             }
         }
 
-        //男性占比
+        // 男性占比
         double maleRatio = Math.round(male * 1000D / total) / 10D;
 
-        //女性占比
+        // 女性占比
         double femaleRatio = Math.round((100D - maleRatio) * 10D) / 10D;
         Option maleOpt = new Option("男", maleRatio);
         Option femaleOpt = new Option("女", femaleRatio);
@@ -176,12 +183,12 @@ public class PublisherServiceImpl implements PublisherService {
         genderOptions.add(femaleOpt);
         Stat genderStat = new Stat(genderOptions, "用户性别占比");
 
-        //创建List集合用来存放Stat对象
+        // 创建List集合用来存放Stat对象
         ArrayList<Stat> stats = new ArrayList<>();
         stats.add(ageStat);
         stats.add(genderStat);
 
-        //创建Map集合用来存放结果数据
+        // 创建Map集合用来存放结果数据
         HashMap<String, Object> result = new HashMap<>();
         result.put("total", total);
         result.put("stat",stats);

@@ -80,6 +80,7 @@ public class read01 {
         System.out.println("命中条数："+result.getTotal());
 
         // 8.获取数据详情
+        // Map.class是用来接收明细数据的
         List<SearchResult.Hit<Map, Void>> hits = result.getHits(Map.class);
         for (SearchResult.Hit<Map, Void> hit : hits) {
             System.out.println("_index:" + hit.index);
